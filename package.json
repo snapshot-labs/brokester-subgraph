@@ -5,6 +5,7 @@
     "codegen": "graph codegen",
     "build": "graph build",
     "prepare:mainnet": "mustache config/mainnet.json subgraph.template.yaml > subgraph.yaml",
+    "prepare:sepolia": "mustache config/sepolia.json subgraph.template.yaml > subgraph.yaml",
     "prepare:goerli": "mustache config/goerli.json subgraph.template.yaml > subgraph.yaml",
     "prepare:gnosis": "mustache config/gnosis.json subgraph.template.yaml > subgraph.yaml",
     "prepare:polygon": "mustache config/polygon.json subgraph.template.yaml > subgraph.yaml",
@@ -32,10 +33,11 @@
     "deploy:hosted-prod": "yarn deploy:mainnet-prod && yarn deploy:goerli-prod && yarn deploy:polygon-prod && yarn deploy:gnosis-prod && yarn deploy:mumbai-prod && yarn deploy:avalanche-prod && yarn deploy:fuji-prod && yarn deploy:bsc-prod",
     "deploy:avalanche-studio": "yarn prepare:avalanche && graph deploy --node https://api.studio.thegraph.com/deploy/ ga-avalanche",
     "deploy:fuji-studio": "yarn prepare:fuji && graph deploy --node https://api.studio.thegraph.com/deploy/ ga-fuji",
+    "deploy:sepolia-studio": "yarn prepare:sepolia && graph deploy --studio test-auction-graph",
     "deploy:goerli-studio": "yarn prepare:goerli && graph deploy --node https://api.studio.thegraph.com/deploy/ ga-goerli",
     "deploy:gnosis-studio": "yarn prepare:gnosis && graph deploy --node https://api.studio.thegraph.com/deploy/ ga-gnosis",
     "deploy:mumbai-studio": "yarn prepare:mumbai && graph deploy --node https://api.studio.thegraph.com/deploy/ ga-mumbai",
-    "deploy:mainnet-studio": "yarn prepare:mainnet && graph deploy --node https://api.studio.thegraph.com/deploy/ ga-mainnet",
+    "deploy:mainnet-studio": "yarn prepare:mainnet && graph deploy auction-graph-mainnet",
     "deploy:studio": "yarn deploy:mainnet-studio && yarn deploy:goerli-studio && yarn deploy:gnosis-studio && yarn deploy:mumbai-studio && yarn deploy:avalanche-studio && yarn deploy:fuji-studio",
     "deploy": "yarn deploy:studio && yarn deploy:hosted-prod",
     "create-local": "graph create --node http://localhost:8020/ gnosisauctionservice",
@@ -45,12 +47,12 @@
     "version": "graph --version"
   },
   "devDependencies": {
-    "matchstick-as": "^0.5.2",
+    "matchstick-as": "^0.6.0",
     "mustache": "^4.2.0"
   },
   "dependencies": {
-    "@graphprotocol/graph-cli": "^0.48.0",
-    "@graphprotocol/graph-ts": "^0.29.3"
+    "@graphprotocol/graph-cli": "^0.80.0",
+    "@graphprotocol/graph-ts": "^0.35.1"
   },
   "version": "0.0.0"
 }

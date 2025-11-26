@@ -1,5 +1,7 @@
 function getChainHexFromName(chainName: string): string {
-	if (chainName.includes("goerli")) {
+	if (chainName.includes("sepolia")) {
+		return "0xaa36a7";
+	} else if (chainName.includes("goerli")) {
 		return "0x05";
 	} else if (chainName.includes("mainnet")) {
 		return "0x01";
@@ -22,7 +24,9 @@ function getChainHexFromName(chainName: string): string {
 }
 
 function getChainIdFromName(chainName: string): i32 {
-    if (chainName.includes("goerli")) {
+    if (chainName.includes("sepolia")) {
+		return 11155111;
+	} else if (chainName.includes("goerli")) {
 		return 5;
 	} else if (chainName.includes("mainnet")) {
 		return 1;
