@@ -278,6 +278,10 @@ export function handleNewSellOrder(event: NewSellOrder): void {
 	let user = User.load(userId.toString());
 	if (!user) {
 		user = new User(userId.toString());
+		// Initialize with empty address and auctions array
+		// The address will be set when handleNewUser is processed
+		user.address = Address.zero();
+		user.auctions = new Array();
 	}
 
 	let auctionDetails = AuctionDetail.load(auctionId.toString());
@@ -334,9 +338,12 @@ export function handleNewSellOrder(event: NewSellOrder): void {
 export function handleNewUser(event: NewUser): void {
 	let userId = event.params.userId;
 	let userAddress = event.params.userAddress;
-	let user = new User(userId.toString());
+	let user = User.load(userId.toString());
+	if (!user) {
+		user = new User(userId.toString());
+		user.auctions = new Array();
+	}
 	user.address = userAddress;
-	user.auctions = new Array();
 	user.save();
 }
 
