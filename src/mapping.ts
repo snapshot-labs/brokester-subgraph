@@ -13,9 +13,10 @@ import {
 	dataSource,
 	store,
 	Bytes,
+	ethereum,
 } from "@graphprotocol/graph-ts";
 import { ERC20Contract } from "../generated/EasyAuction/ERC20Contract";
-import { AuctionDetail, User } from "../generated/schema";
+import { AuctionDetail, User, AuctionPriceHourData, AuctionPriceMinuteData } from "../generated/schema";
 import {
 	EasyAuction,
 	AuctionCleared,
@@ -82,6 +83,8 @@ export function handleAuctionCleared(event: AuctionCleared): void {
 	auctionDetails.volumeClearingPriceOrder = eventAuctionData.getVolumeClearingPriceOrder();
 
 	auctionDetails.save();
+
+	updateTimeSeriesEntities(event, auctionDetails);
 }
 
 export function handleCancellationSellOrder(
@@ -127,7 +130,7 @@ export function handleCancellationSellOrder(
 
 	auctionDetails.save();
 
-	updateClearingOrderAndVolume(auctionDetails.auctionId);
+	updateClearingOrderAndVolume(event, auctionDetails.auctionId);
 }
 
 // Remove claimed orders
@@ -239,6 +242,8 @@ export function handleNewAuction(event: NewAuction): void {
 	auctionDetails.orders = [];
 	auctionDetails.ordersWithoutClaimed = [];
 	auctionDetails.save();
+
+	updateTimeSeriesEntities(event, auctionDetails);
 }
 
 export function convertToPricePoint(
@@ -339,7 +344,7 @@ export function handleNewSellOrder(event: NewSellOrder): void {
 	user.save();
 	auctionDetails.save();
 
-	updateClearingOrderAndVolume(auctionDetails.auctionId);
+	updateClearingOrderAndVolume(event, auctionDetails.auctionId);
 }
 
 export function handleNewUser(event: NewUser): void {
@@ -398,7 +403,70 @@ function getUsdAmountTraded(
 	return ZERO.toBigDecimal();
 }
 
-function updateClearingOrderAndVolume(auctionId: BigInt): void {
+function updateTimeSeriesEntities(
+	event: ethereum.Event,
+	auctionDetails: AuctionDetail
+): void {
+	let auctionId = auctionDetails.auctionId;
+	let timestamp = event.block.timestamp;
+	let clearingPrice = auctionDetails.currentClearingPrice;
+	let volume = auctionDetails.currentVolume;
+	let biddingAmount = auctionDetails.currentBiddingAmount;
+
+	let timestampI32 = timestamp.toI32();
+	let minuteStartUnix = timestampI32 - (timestampI32 % 60);
+	let hourStartUnix = timestampI32 - (timestampI32 % 3600);
+
+	let minuteId = auctionId.toString() + "-minute-" + minuteStartUnix.toString();
+	let minuteData = AuctionPriceMinuteData.load(minuteId);
+	if (!minuteData) {
+		minuteData = new AuctionPriceMinuteData(minuteId);
+		minuteData.auction = auctionId.toString();
+		minuteData.startTimestamp = minuteStartUnix;
+		minuteData.open = clearingPrice;
+		minuteData.high = clearingPrice;
+		minuteData.low = clearingPrice;
+		minuteData.volumeTotal = volume;
+		minuteData.biddingAmountTotal = biddingAmount;
+	} else {
+		if (clearingPrice.gt(minuteData.high)) {
+			minuteData.high = clearingPrice;
+		}
+		if (clearingPrice.lt(minuteData.low)) {
+			minuteData.low = clearingPrice;
+		}
+		minuteData.volumeTotal = minuteData.volumeTotal.plus(volume);
+		minuteData.biddingAmountTotal = minuteData.biddingAmountTotal.plus(biddingAmount);
+	}
+	minuteData.close = clearingPrice;
+	minuteData.save();
+
+	let hourId = auctionId.toString() + "-hour-" + hourStartUnix.toString();
+	let hourData = AuctionPriceHourData.load(hourId);
+	if (!hourData) {
+		hourData = new AuctionPriceHourData(hourId);
+		hourData.auction = auctionId.toString();
+		hourData.startTimestamp = hourStartUnix;
+		hourData.open = clearingPrice;
+		hourData.high = clearingPrice;
+		hourData.low = clearingPrice;
+		hourData.volumeTotal = volume;
+		hourData.biddingAmountTotal = biddingAmount;
+	} else {
+		if (clearingPrice.gt(hourData.high)) {
+			hourData.high = clearingPrice;
+		}
+		if (clearingPrice.lt(hourData.low)) {
+			hourData.low = clearingPrice;
+		}
+		hourData.volumeTotal = hourData.volumeTotal.plus(volume);
+		hourData.biddingAmountTotal = hourData.biddingAmountTotal.plus(biddingAmount);
+	}
+	hourData.close = clearingPrice;
+	hourData.save();
+}
+
+function updateClearingOrderAndVolume(event: ethereum.Event, auctionId: BigInt): void {
 	let auctionDetails = AuctionDetail.load(auctionId.toString());
 	if (!auctionDetails) {
 		return;
@@ -489,6 +557,7 @@ function updateClearingOrderAndVolume(auctionId: BigInt): void {
 				currentOrder.price
 			);
 			auctionDetails.save();
+			updateTimeSeriesEntities(event, auctionDetails);
 			return;
 		} else {
 			let clearingOrderSellAmount = biddingTokenTotal.minus(
@@ -519,6 +588,7 @@ function updateClearingOrderAndVolume(auctionId: BigInt): void {
 				currentClearingPrice
 			);
 			auctionDetails.save();
+			updateTimeSeriesEntities(event, auctionDetails);
 			return;
 		}
 	} else if (biddingTokenTotal.ge(biddingTokenAmountOfInitialOrder)) {
@@ -546,6 +616,7 @@ function updateClearingOrderAndVolume(auctionId: BigInt): void {
 		);
 
 		auctionDetails.save();
+		updateTimeSeriesEntities(event, auctionDetails);
 		return;
 	} else {
 		const clearingOrderBuyAmount = auctioningTokenAmountOfInitialOrder;
@@ -576,6 +647,7 @@ function updateClearingOrderAndVolume(auctionId: BigInt): void {
 			currentClearingPrice
 		);
 		auctionDetails.save();
+		updateTimeSeriesEntities(event, auctionDetails);
 		return;
 	}
 }
