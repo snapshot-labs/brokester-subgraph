@@ -16,7 +16,7 @@ import {
 	ethereum,
 } from "@graphprotocol/graph-ts";
 import { ERC20Contract } from "../generated/EasyAuction/ERC20Contract";
-import { AuctionDetail, User, AuctionHourData, AuctionMinuteData } from "../generated/schema";
+import { AuctionDetail, User, AuctionPriceHourData, AuctionPriceMinuteData } from "../generated/schema";
 import {
 	EasyAuction,
 	AuctionCleared,
@@ -418,9 +418,9 @@ function updateTimeSeriesEntities(
 	let hourStartUnix = timestampI32 - (timestampI32 % 3600);
 
 	let minuteId = auctionId.toString() + "-minute-" + minuteStartUnix.toString();
-	let minuteData = AuctionMinuteData.load(minuteId);
+	let minuteData = AuctionPriceMinuteData.load(minuteId);
 	if (!minuteData) {
-		minuteData = new AuctionMinuteData(minuteId);
+		minuteData = new AuctionPriceMinuteData(minuteId);
 		minuteData.auction = auctionId.toString();
 		minuteData.startTimestamp = minuteStartUnix;
 		minuteData.open = clearingPrice;
@@ -442,9 +442,9 @@ function updateTimeSeriesEntities(
 	minuteData.save();
 
 	let hourId = auctionId.toString() + "-hour-" + hourStartUnix.toString();
-	let hourData = AuctionHourData.load(hourId);
+	let hourData = AuctionPriceHourData.load(hourId);
 	if (!hourData) {
-		hourData = new AuctionHourData(hourId);
+		hourData = new AuctionPriceHourData(hourId);
 		hourData.auction = auctionId.toString();
 		hourData.startTimestamp = hourStartUnix;
 		hourData.open = clearingPrice;

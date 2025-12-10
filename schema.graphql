@@ -50,7 +50,7 @@ type AuctionDetail @entity {
   usdAmountTraded: BigDecimal!
 }
 
-type AuctionHourData @entity {
+type AuctionPriceHourData @entity {
   id: ID!
   auction: AuctionDetail!
   startTimestamp: Int!
@@ -62,7 +62,7 @@ type AuctionHourData @entity {
   biddingAmountTotal: BigInt!
 }
 
-type AuctionMinuteData @entity {
+type AuctionPriceMinuteData @entity {
   id: ID!
   auction: AuctionDetail!
   startTimestamp: Int!
