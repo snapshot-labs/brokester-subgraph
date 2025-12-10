@@ -16,7 +16,7 @@ import {
 	ethereum,
 } from "@graphprotocol/graph-ts";
 import { ERC20Contract } from "../generated/EasyAuction/ERC20Contract";
-import { AuctionDetail, User, AuctionPriceHourData, AuctionPriceMinuteData } from "../generated/schema";
+import { AuctionDetail, User, AuctionPriceHourData, AuctionPriceMinuteData, AuctionPriceLevel } from "../generated/schema";
 import {
 	EasyAuction,
 	AuctionCleared,
@@ -123,12 +123,26 @@ export function handleCancellationSellOrder(
 	}
 	auctionDetails.ordersWithoutClaimed = ordersWithoutClaimed;
 
+	let pricePoint = convertToPricePoint(
+		sellAmount,
+		buyAmount,
+		auctionDetails.decimalsAuctioningToken.toI32(),
+		auctionDetails.decimalsBiddingToken.toI32()
+	);
+
 	// Remove order from the list ordersWithoutDeleted
 	orderIdsToDelete.values().forEach((orderId) => {
 		store.remove("Order", orderId);
 	});
 
 	auctionDetails.save();
+
+	updateAuctionPriceLevel(
+		auctionId.toString(),
+		pricePoint.get("price"),
+		pricePoint.get("volume"),
+		false
+	);
 
 	updateClearingOrderAndVolume(event, auctionDetails.auctionId);
 }
@@ -343,6 +357,13 @@ export function handleNewSellOrder(event: NewSellOrder): void {
 	}
 	user.save();
 	auctionDetails.save();
+
+	updateAuctionPriceLevel(
+		auctionId.toString(),
+		pricePoint.get("price"),
+		pricePoint.get("volume"),
+		true
+	);
 
 	updateClearingOrderAndVolume(event, auctionDetails.auctionId);
 }
@@ -650,4 +671,56 @@ function updateClearingOrderAndVolume(event: ethereum.Event, auctionId: BigInt):
 		updateTimeSeriesEntities(event, auctionDetails);
 		return;
 	}
+}
+
+function getBucketedPrice(price: BigDecimal): BigDecimal {
+	// Determine bucketing based on price magnitude
+	// For prices >= 1: bucket to 0.01
+	// For prices >= 0.01: bucket to 0.0001
+	// For prices < 0.01: bucket to 0.000001
+	let bucketSize: BigDecimal;
+	
+	if (price.ge(BigDecimal.fromString("1"))) {
+		bucketSize = BigDecimal.fromString("0.01");
+	} else if (price.ge(BigDecimal.fromString("0.01"))) {
+		bucketSize = BigDecimal.fromString("0.0001");
+	} else {
+		bucketSize = BigDecimal.fromString("0.000001");
+	}
+	
+	return price.div(bucketSize).truncate(0).times(bucketSize);
+}
+
+function updateAuctionPriceLevel(
+	auctionId: string,
+	price: BigDecimal,
+	volume: BigDecimal,
+	isNewOrder: boolean
+): void {
+	let bucketedPrice = getBucketedPrice(price);
+	let priceLevelId = auctionId + "-" + bucketedPrice.toString();
+	
+	let priceLevel = AuctionPriceLevel.load(priceLevelId);
+	if (!priceLevel) {
+		priceLevel = new AuctionPriceLevel(priceLevelId);
+		priceLevel.auction = auctionId;
+		priceLevel.price = bucketedPrice;
+		priceLevel.volume = BigDecimal.fromString("0");
+		priceLevel.bidCount = 0;
+	}
+	
+	if (isNewOrder) {
+		priceLevel.volume = priceLevel.volume.plus(volume);
+		priceLevel.bidCount = priceLevel.bidCount + 1;
+	} else {
+		priceLevel.volume = priceLevel.volume.minus(volume);
+		priceLevel.bidCount = priceLevel.bidCount - 1;
+		
+		if (priceLevel.bidCount <= 0) {
+			store.remove("AuctionPriceLevel", priceLevelId);
+			return;
+		}
+	}
+	
+	priceLevel.save();
 }
