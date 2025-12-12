@@ -73,3 +73,11 @@ type AuctionPriceMinuteData @entity {
   volumeTotal: BigDecimal!
   biddingAmountTotal: BigInt!
 }
+
+type AuctionPriceLevel @entity {
+  id: ID!
+  auction: AuctionDetail!
+  price: BigDecimal!
+  volume: BigDecimal!
+  bidCount: Int!
+}
