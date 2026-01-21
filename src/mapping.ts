@@ -512,6 +512,26 @@ function updateClearingOrderAndVolume(event: ethereum.Event, auctionId: BigInt):
 	let biddingTokenTotal = ZERO;
 	let currentOrder: Order | null = null;
 
+	if (orders.length === 0) {
+		let pricePoint = convertToPricePoint(
+			initialOrderSellAmount,
+			initialOrderBuyAmount,
+			decimalBiddingToken.toI32(),
+			decimalAuctioningToken.toI32()
+		);
+
+		auctionDetails.currentClearingOrderBuyAmount = ZERO;
+		auctionDetails.currentClearingOrderSellAmount = ZERO;
+		auctionDetails.currentClearingPrice = pricePoint.get("price");
+		auctionDetails.currentVolume = BigDecimal.fromString("0");
+		auctionDetails.currentBiddingAmount = ZERO;
+		auctionDetails.interestScore = BigDecimal.fromString("0");
+		auctionDetails.usdAmountTraded = BigDecimal.fromString("0");
+		auctionDetails.save();
+		updateTimeSeriesEntities(event, auctionDetails);
+		return;
+	}
+
 	// Loop through all the sorted orders
 	// Orders are sorted from highest price to lowest
 	for (let i = 0; i < orders.length; i++) {
