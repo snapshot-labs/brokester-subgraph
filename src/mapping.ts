@@ -141,6 +141,7 @@ export function handleCancellationSellOrder(
 		auctionId.toString(),
 		pricePoint.get("price"),
 		pricePoint.get("volume"),
+		buyAmount,
 		false
 	);
 
@@ -364,6 +365,7 @@ export function handleNewSellOrder(event: NewSellOrder): void {
 		auctionId.toString(),
 		pricePoint.get("price"),
 		pricePoint.get("volume"),
+		buyAmount,
 		true
 	);
 
@@ -699,6 +701,7 @@ function updateAuctionPriceLevel(
 	auctionId: string,
 	price: BigDecimal,
 	volume: BigDecimal,
+	buyAmount: BigInt,
 	isNewOrder: boolean
 ): void {
 	let priceLevelId = auctionId + "-" + price.toString();
@@ -710,15 +713,18 @@ function updateAuctionPriceLevel(
 		priceLevel.price = price;
 		priceLevel.volume = BigDecimal.fromString("0");
 		priceLevel.bidCount = 0;
+		priceLevel.buyAmount = ZERO;
 	}
 	
 	if (isNewOrder) {
 		priceLevel.volume = priceLevel.volume.plus(volume);
 		priceLevel.bidCount = priceLevel.bidCount + 1;
+		priceLevel.buyAmount = priceLevel.buyAmount.plus(buyAmount);
 	} else {
 		priceLevel.volume = priceLevel.volume.minus(volume);
 		priceLevel.bidCount = priceLevel.bidCount - 1;
-		
+		priceLevel.buyAmount = priceLevel.buyAmount.minus(buyAmount);
+
 		if (priceLevel.bidCount <= 0) {
 			store.remove("AuctionPriceLevel", priceLevelId);
 			return;
