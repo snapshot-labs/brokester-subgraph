@@ -42,6 +42,7 @@ type AuctionDetail @entity {
   currentClearingOrderBuyAmount: BigInt!
   currentClearingPrice: BigDecimal!
   currentBiddingAmount: BigInt!
+  orderCount: Int!
   # From contract after finalization
   clearingPriceOrder: Bytes
   volumeClearingPriceOrder: BigInt

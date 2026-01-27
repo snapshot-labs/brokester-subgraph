@@ -111,6 +111,8 @@ export function handleCancellationSellOrder(
 		orderIdsToDelete.set(removedOrder[0], removedOrder[0]);
 	}
 	auctionDetails.orders = orders;
+	auctionDetails.orderCount = auctionDetails.orderCount - 1;
+
 	// Remove order from the list ordersWithoutClaimed
 	let ordersWithoutClaimed: string[] = [];
 	if (auctionDetails.ordersWithoutClaimed) {
@@ -257,6 +259,7 @@ export function handleNewAuction(event: NewAuction): void {
 	auctionDetails.currentClearingOrderBuyAmount = new BigInt(0);
 	auctionDetails.orders = [];
 	auctionDetails.ordersWithoutClaimed = [];
+	auctionDetails.orderCount = 0;
 	auctionDetails.save();
 
 	updateTimeSeriesEntities(event, auctionDetails);
@@ -343,6 +346,7 @@ export function handleNewSellOrder(event: NewSellOrder): void {
 	}
 	orders.push(order.id);
 	auctionDetails.orders = orders;
+	auctionDetails.orderCount = auctionDetails.orderCount + 1;
 
 	let ordersWithoutClaimed: string[] = [];
 	if (auctionDetails.ordersWithoutClaimed) {
